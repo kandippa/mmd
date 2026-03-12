@@ -1,42 +1,51 @@
-{\rtf1\ansi\ansicpg1252\cocoartf2822
-\cocoatextscaling0\cocoaplatform0{\fonttbl\f0\froman\fcharset0 TimesNewRomanPS-BoldMT;\f1\froman\fcharset0 TimesNewRomanPSMT;}
-{\colortbl;\red255\green255\blue255;\red0\green0\blue0;}
-{\*\expandedcolortbl;;\csgray\c0;}
-\margl1440\margr1440\vieww11520\viewh8400\viewkind0
-\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\pardirnatural\partightenfactor0
+import networkx as nx
 
-\f0\b\fs18 \cf2 PROGRAM 1\
+def simrank(G, C=0.8, iterations=5):
+    nodes = list(G.nodes())
 
-\f1\b0 import csv\
-def loaddata(filename):\
-with open(filename,'r')as f:\
-reader = csv.reader(f)\
-data = list(reader)\
-header = data[0]\
-instances = data[1:]\
-return header,instances\
-def finds(data):\
-for instance in data:\
-if instance[-1].lower() == 'yes':\
-hypothesis = instance[:-1]\
-else:\
-None\
-for instance in data:\
-if instance[-1].lower() == 'yes':\
-for i in range(len(hypothesis)):\
-if hypothesis[i] != instance[i]:\
-hypothesis[i] = '?'\
-return hypothesis\
-filename = 'trainingdata.csv'\
-header,data = loaddata(filename)\
-print('Attributes:',header)\
-print(' ')\
-print('Training data')\
-for row in data:\
-print(row)\
-hypothesis = finds(data)\
-if hypothesis:\
-print('Most specific hypothesis by FIND-S')\
-print(hypothesis)\
-else:\
-print('No positive training examples in training data')}
+    sim = {u: {v: 0 for v in nodes} for u in nodes}
+    for n in nodes:
+        sim[n][n] = 1
+
+    for _ in range(iterations):
+        new_sim = {u: {v: 0 for v in nodes} for u in nodes}
+
+        for u in nodes:
+            new_sim[u][u] = 1
+
+            for v in nodes:
+                if u == v:
+                    continue
+
+                in_u = list(G.predecessors(u))
+                in_v = list(G.predecessors(v))
+
+                if len(in_u) == 0 or len(in_v) == 0:
+                    new_sim[u][v] = 0
+                else:
+                    total = 0
+                    for i in in_u:
+                        for j in in_v:
+                            total += sim[i][j]
+
+                    new_sim[u][v] = C * total / (len(in_u) * len(in_v))
+
+        sim = new_sim
+
+    return sim
+
+
+G = nx.DiGraph()
+G.add_edges_from([
+    ('A', 'C'),
+    ('B', 'C'),
+    ('A', 'D'),
+    ('B', 'D')
+])
+
+result = simrank(G)
+
+print("SimRank Similarity:\n")
+for u in result:
+    for v in result[u]:
+        print(f"S({u},{v}) = {result[u][v]:.2f}")
